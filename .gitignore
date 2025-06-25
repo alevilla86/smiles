@@ -1,4 +1,2 @@
 /venv/
-/data/
-/similar_cids/
-/similarity_results/
+/models/
