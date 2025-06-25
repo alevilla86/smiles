@@ -22,7 +22,7 @@ URL_STRUCTURE_SEARCH = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/{simi
 URL_STRUCTURE_SEARCH_CIDS = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/listkey/{listKey}/cids/TXT"
 URL_COMPOUND_INFO_JSON = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{cid}/JSON"
 SIMILAR_CIDS_FOLDER = Path("similar_cids")
-SIMILAR_CIDS_FILE = "{smiles}_similarity_{similarity}_related_cids.txt"
+SIMILAR_CIDS_FILE = "{smiles}_similar_cids.txt"
 
 TOTAL_COMPOUNDS = 0
 TOTAL_COMPOUNDS_LEFT = 0
@@ -77,13 +77,13 @@ def download_pubchem_structure_result_cids(listKey, similarity_type, smiles, sim
         # Guardamos los CIDs en un archivo de texto.
         # El nombre del archivo es el SMILES y el tipo de similitud.
         # Si el tipo de similitud es 3D, usamos un nombre especial.
-        file_name = SIMILAR_CIDS_FILE.format(smiles=smiles, similarity=similarity_type)
+        file_name = SIMILAR_CIDS_FILE.format(smiles=smiles)
         file = SIMILAR_CIDS_FOLDER / file_name
-        with open(file, "w", encoding="utf-8") as f:
+        with open(file, "a", encoding="utf-8") as f:
             for cid in new_cids:
                 f.write(cid + "\n")
 
-        print(f"Archivo sobrescrito con {total_new_cids} CIDs en {file_name}.")
+        print(f"Archivo modificado con {total_new_cids} nuevos CIDs en {file_name}.")
 
     except requests.exceptions.RequestException as e:
         print(f"Error during the request: {e}")
@@ -167,7 +167,7 @@ def build_similar_substructures_list_file(smiles_list):
         print(f"Descargando CIDs para ListKey: {list_key} y SMILES: {smiles}")
         download_pubchem_structure_result_cids(list_key, similarity_type, smiles)
 
-def write_csv_dataset(file, _ref_smile, similarity):
+def write_csv_dataset(file, _ref_smile):
     if not os.path.exists(file):
         print(f"El archivo {file} no existe.")
         return
@@ -193,7 +193,7 @@ def write_csv_dataset(file, _ref_smile, similarity):
             compound_properties = compound_parser.parse_compound_json(data)
             
             #WRITE TO CSV
-            compound_ds_writer.write_to_csv(_ref_smile, compound_properties, similarity)
+            compound_ds_writer.write_to_csv(_ref_smile, compound_properties)
 
             I += 1
         except requests.exceptions.RequestException as e:
@@ -221,16 +221,9 @@ def build_data_set(smiles):
         smiles (list): Lista de SMILES para los cuales se generarán los DataSets.
     """
     for smile in smiles:
-        for _similarity in SIMILARITY_TYPES:
-            file_name = SIMILAR_CIDS_FILE.format(smiles=smile, similarity=_similarity)
-            file = SIMILAR_CIDS_FOLDER / file_name
-            write_csv_dataset(file, smile, _similarity)
-
-        # 3D similarity search is a special case, handled separately
-        print(f"Generando DataSet para SMILES: {smile} con tipo de similitud 3D.")
-        file_name = SIMILAR_CIDS_FILE.format(smiles=smile, similarity=SIMILARITY_TYPES_3D)
+        file_name = SIMILAR_CIDS_FILE.format(smiles=smile)
         file = SIMILAR_CIDS_FOLDER / file_name
-        write_csv_dataset(file, smile, SIMILARITY_TYPES_3D)
+        write_csv_dataset(file, smile)
 
 if __name__ == "__main__":
     start_time = datetime.now()
