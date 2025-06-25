@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 CSV_FILE_FOLDER = Path("data")
-CSV_FILE_NAME = "{smiles}_similarity_{similarity}_data.csv"
+CSV_FILE_NAME = "{smiles}_similarity_data.csv"
 
 # Define los nombres de las columnas que se van a utilizar en el DataFrame
 # Asegúrate de que estos nombres coincidan con los que se usan en el DataFrame
@@ -41,9 +41,9 @@ def flatten_parsed_info(compound_properties):
         "no_lipinski_violations": compound_properties.get("no_lipinski_violations", "")
     }
 
-def write_to_csv(smiles, compound_properties, similarity):
+def write_to_csv(smiles, compound_properties):
     CSV_FILE_FOLDER.mkdir(exist_ok=True)
-    file_name = CSV_FILE_NAME.format(smiles=smiles, similarity=similarity)
+    file_name = CSV_FILE_NAME.format(smiles=smiles)
     file = CSV_FILE_FOLDER / file_name
     
     if compound_properties:
