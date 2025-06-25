@@ -1,0 +1,2 @@
+cid,iupac_name,smiles_canonical,molecular_formula,hydrogen_bond_acceptors,hydrogen_bond_donors,rotatable_bonds,log_p,molecular_weight,heavy_atom_count,polar_surface_area,atom_surface_coefficient,no_lipinski_violations
+76310487,"methyl 3-chloro-4-[[2-[6-chloro-1-(3,5-dimethylphenyl)sulfonyl-benzimidazol-2-yl]sulfanylacetyl]amino]benzoate",CC1=CC(=CC(=C1)S(=O)(=O)N2C3=C(C=CC(=C3)Cl)N=C2SCC(=O)NC4=C(C=C(C=C4)C(=O)OC)Cl)C,C25H21Cl2N3O5S2,8,1,7,5.714340000000004,577.0299681319999,37,107.36,0.34463487332339793,2
