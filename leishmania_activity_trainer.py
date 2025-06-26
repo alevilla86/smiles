@@ -1,19 +1,17 @@
 from chembl_webresource_client.new_client import new_client
 import pandas as pd
-
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem
 import numpy as np
-
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
-
 from itertools import islice
-
 import joblib
-
 import os
+from rdkit import RDLogger
+
+RDLogger.DisableLog('rdApp.*')
 
 def get_fingerprint(smiles):
     mol = Chem.MolFromSmiles(smiles)
@@ -24,14 +22,21 @@ def get_fingerprint(smiles):
     DataStructs.ConvertToNumpyArray(fp, arr)
     return arr
 
-
 # Obtener resultados de actividad para Leishmania
 # Filtrar por tipo estándar "IC50" y organismos diana específicos
-leishmania_species = ["Leishmania major", "Leishmania donovani", "Leishmania infantum", 
+LEISHMANIA_SPECIES = ["Leishmania major", "Leishmania donovani", "Leishmania infantum", 
                       "Leishmania mexicana", "Leishmania braziliensis"]
+
+MAX_VALUE_UM_IC50 = 20.0
+
 activity = new_client.activity
-active_results = activity.filter(standard_type="IC50", target_organism__in=leishmania_species).only(['molecule_chembl_id', 'molecule_structures'])
+active_results = activity.filter(standard_type="IC50", 
+                                 target_organism__in=LEISHMANIA_SPECIES,
+                                 units="uM",
+                                 value__lt=MAX_VALUE_UM_IC50,).only(['molecule_chembl_id', 'molecule_structures', 'value', 'units', 'target_organism'])
 print(f"Total de compuestos activos para alguna de las especies de Leishmania encontrados: {len(active_results)}")
+
+print(f"Resultados de actividad para Leishmania: {len(active_results)} compuestos")
 
 # Convertir los resultados a un DataFrame y extraer los IDs de compuestos activos
 active_df = pd.DataFrame(active_results)
@@ -82,8 +87,8 @@ print("Procesdos los smiles de los compuestos no activos contra Leishmania")
 
 # Combinar los datos positivos y negativos
 all_data = positive_samples + negative_samples
-X = np.array([x[0] for x in all_data])
-y = np.array([x[1] for x in all_data])
+X = np.array([x[0] for x in all_data]) # todos los FPs
+y = np.array([x[1] for x in all_data]) # etiquetas (1 para activo, 0 para no activo)
 
 print("Datos combinados y preparados para el entrenamiento")
 
