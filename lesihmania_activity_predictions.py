@@ -13,6 +13,9 @@ SIMILARITY_RESULTS_DIR = Path("similarity_results")
 RECOMMENDATIONS_DIR = Path("recommendations")
 RECOMMENDATIONS_DIR.mkdir(parents=True, exist_ok=True)
 
+THRESHOLD_TOP = 0.8  # Umbral de decisión para considerar activo
+THRESHOLD_BOTOM = 0.5  # Umbral de decisión para considerar inactivo
+
 # Cargar modelo entrenado
 print("Cargando modelo de Leishmania...")
 clf = joblib.load("models/leishmania_model_v1.pkl")
@@ -27,6 +30,14 @@ def get_fingerprint(smiles):
     arr = np.zeros((2048,))
     DataStructs.ConvertToNumpyArray(fp, arr)
     return arr
+
+def calculate_leishmania_probability(probability):
+    if probability >= THRESHOLD_TOP:
+        return "Alta"
+    elif THRESHOLD_BOTOM <= probability < THRESHOLD_TOP:
+        return "Media"
+    else:
+        return "Baja"
 
 def add_leishmania_prediction_columns(file):
     # Leer archivo con los SMILES
@@ -53,20 +64,16 @@ def add_leishmania_prediction_columns(file):
     predictions = clf.predict(X_valid)
     probabilities = clf.predict_proba(X_valid)[:, 1]  # Solo prob. de clase 1 (Activo)
 
-    # Definir umbral de decisión
-    threshold = 0.8
-    predictions = (probabilities >= threshold).astype(int)
-
     # Insertar predicciones en el DataFrame
     df["actividad_predicha"] = None
-    df["probabilidad_actividad_leishmanicida"] = None
     for idx, pred, prob in zip(valid_idx, predictions, probabilities):
-        df.at[idx, "actividad_predicha"] = "Activo" if pred == 1 else "Inactivo"
-        df.at[idx, "probabilidad_actividad_leishmanicida"] = float(round(prob, 4))  # 4 decimales opcional
+        df.at[idx, "actividad_predicha"] = calculate_leishmania_probability(prob)
 
     # Guardar archivo con resultados
-    output_file = RECOMMENDATIONS_DIR / f"{ref_smiles}_recommendations.csv"
-    df.to_csv(output_file, index=False)
+    output_csv = RECOMMENDATIONS_DIR / f"{ref_smiles}_recommendations.csv"
+    output_excel = RECOMMENDATIONS_DIR / f"{ref_smiles}_recommendations.xlsx"
+    df.to_csv(output_csv, index=False)
+    df.to_excel(output_excel, index=False)
 
 if __name__ == "__main__":
 
