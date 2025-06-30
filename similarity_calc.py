@@ -5,6 +5,10 @@ from pathlib import Path
 from rdkit import Chem
 from rdkit.Chem import AllChem, DataStructs
 from compound_properties import CompoundProperties
+import numpy as np
+from rdkit import RDLogger
+
+RDLogger.DisableLog('rdApp.*')
 
 DATA = Path("data")
 OUT_DIR  = Path("similarity_results")
@@ -120,11 +124,11 @@ def calculate_similarity():
 
         combined_25, combined_50, combined_75, combined_geometric, combined_harmonic = do_combined_similarity(df_sim)
 
-        df_sim["combined_25"] = combined_25
-        df_sim["combined_50"] = combined_50
+        #df_sim["combined_25"] = combined_25
+        #df_sim["combined_50"] = combined_50
         df_sim["combined_75"] = combined_75
-        df_sim["combined_geometric"] = combined_geometric
-        df_sim["combined_harmonic"] = combined_harmonic
+        #df_sim["combined_geometric"] = combined_geometric
+        #df_sim["combined_harmonic"] = combined_harmonic
 
         # Output file para guardar los resultados
         result_file = OUT_DIR / f"{file.stem}_similarity_results.csv"

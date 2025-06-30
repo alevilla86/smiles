@@ -9,6 +9,8 @@ from typing import Dict
 from datetime import datetime
 from pathlib import Path
 import similarity_calc
+import lesihmania_activity_predictions
+import final_reccomendation_builder
 
 # Algunos tipos de similitud que vamos a usar, el request que hacemos a PubChem
 # para buscar similitudes soporta varios tipos de similitud. En este caso, solo usamos subestructura.
@@ -23,6 +25,21 @@ URL_STRUCTURE_SEARCH_CIDS = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/
 URL_COMPOUND_INFO_JSON = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{cid}/JSON"
 SIMILAR_CIDS_FOLDER = Path("similar_cids")
 SIMILAR_CIDS_FILE = "{smiles}_similar_cids.txt"
+
+USAL_COMPOUNDS = [
+    "CC1=CC2=C(NC(=N2)C2=CC=C(O2)N(=O)=O)C=C1",
+    "ClC1=CC2=C(NC(NC(=O)C3=NC=CC=C3)N2)C=C1",
+    "CC1=CC=CN=C1C(=O)NC1=NC2=C(N1)C=CC(Cl)=C2",
+    "ClC1=CC2=C(NC(NC(=O)C3=NC=CC4=C3C=CC=C4)=N2)C=C1",
+    "CCCCC1=CC=C(C=C1)C(=O)NC1=NC2=C(N1)C=CC(Cl)=C2",
+    "CC1=CC2=C(NC(NC(=O)C3=NC=CC=C3)=N2)C=C1",
+    "COC(=O)C1=CC=C(NC(=O)CSC2=NC3=C(C=C(Cl)C=C3)N2CC2=CC(C)=CC(C)=C2)C(Cl)=C1",
+    "COC(=O)C1=CC=C(NC(=O)CSC2=NC3=C(C=C(Cl)C=C3)N2S(=O)(=O)C2=CC(C)=CC(C)=C2)C=C1",
+    "O=C(NC1=CC(=CC=C1)C1=NC2=C(N1)C=CC=C2)C1=CC=C(C=C1)C1=CC=CC=C1",
+    "CN1C(NCC2=CC(Br)=CC=C2O)=NC2=C1C=CC=C2",
+    "NC(=N)NC1=CC2=C(NC(=N2)C2=CC=C(C=C2)C2=CC=CC=C2)C=C1",
+    "O=C(N\\N=C\\C1=CC=C(O1)N(=O)=O)C1=NC2=C(N1)C=CC=C2"]
+
 
 TOTAL_COMPOUNDS = 0
 TOTAL_COMPOUNDS_LEFT = 0
@@ -232,14 +249,19 @@ if __name__ == "__main__":
 
     print("Introduce los SMILEs que quieres evaluar (escribe 'ACEPTAR' para iniciar el proceso):")
 
-    while True:
-        user_input = input("> ").strip()
-        
-        if user_input.upper() == "ACEPTAR":
-            break
-        
-        if user_input and user_input not in inputs:
-            inputs.append(user_input)
+    # Comentar esta linea si quieres introducir SMILES manualmente.
+    # USAL_COMPOUNDS es una lista de SMILES predefinidos que se usarán si no se introducen SMILES manualmente.
+    inputs = USAL_COMPOUNDS
+
+    if not inputs:
+        while True:
+            user_input = input("> ").strip()
+            
+            if user_input.upper() == "ACEPTAR":
+                break
+            
+            if user_input and user_input not in inputs:
+                inputs.append(user_input)
 
     print("\nSMILES introducidos:")
     for item in inputs:
@@ -255,6 +277,12 @@ if __name__ == "__main__":
 
     # Ahora calculamos las similitudes entre los compuestos.
     similarity_calc.calculate_similarity()
+
+    # Damos las recomendaciones finales tomando en cuenta las similitudes y las predicciones de actividad contra Leishmania.
+    lesihmania_activity_predictions.add_leishmania_prediction_columns()
+
+    # Hacemos la recomendación final combinando todos los resultados.
+    final_reccomendation_builder.combine_excel_files()
 
     end_time = datetime.now()
     duration = end_time - start_time
