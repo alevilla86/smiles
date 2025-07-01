@@ -88,6 +88,10 @@ def parse_compound_json(json_string):
         #Calculamos las propiedades del compuesto usando CompoundProperties (rdkit) para esetandardizar las comparaciones.
         compound_properties = CompoundProperties(name, smiles)
 
+        if not compound_properties.has_benzimidazole():
+            print(f"El compuesto con CID {cid} NO es benzimidazol.")
+            return None
+
         properties["cid"] = cid
         properties["iupac_name"] = compound_properties.name
         properties["smiles"] = compound_properties.smiles

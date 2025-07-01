@@ -51,3 +51,8 @@ class CompoundProperties:
             "heavy_atom_count": rdMolDescriptors.CalcNumHeavyAtoms(self.mol),
             "polar_surface_area": rdMolDescriptors.CalcTPSA(self.mol)
         }
+    
+    def has_benzimidazole(self):
+        benzimidazole_smiles = Chem.MolFromSmarts('c1cc2c(c(c1))ncn2')
+        mol = Chem.MolFromSmiles(self.smiles)
+        return mol.HasSubstructMatch(benzimidazole_smiles) if mol else False

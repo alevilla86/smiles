@@ -208,11 +208,16 @@ def write_csv_dataset(file, _ref_smile):
             response.raise_for_status()
             data = response.text
             compound_properties = compound_parser.parse_compound_json(data)
-            
-            #WRITE TO CSV
-            compound_ds_writer.write_to_csv(_ref_smile, compound_properties)
 
             I += 1
+            
+            if compound_properties is None:
+                print(f"Error al parsear el JSON o el compuesto no es benzimidazol para CID {cid}. Saltando este CID.")
+                continue
+
+            #WRITE TO CSV
+            compound_ds_writer.write_to_csv(_ref_smile, compound_properties)
+            
         except requests.exceptions.RequestException as e:
             print(f"Error al consultar el CID {cid}: {e}")
         finally:
