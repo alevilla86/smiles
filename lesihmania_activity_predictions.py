@@ -7,10 +7,12 @@ from rdkit import DataStructs
 from pathlib import Path
 from rdkit import RDLogger
 
+from constants import SIMILARITY_RESULTS_DIR, RECOMMENDATIONS_DIR, LEISHMANIA_MODEL_PATH
+
 RDLogger.DisableLog('rdApp.*')
 
-SIMILARITY_RESULTS_DIR = Path("similarity_results")
-RECOMMENDATIONS_DIR = Path("recommendations")
+# SIMILARITY_RESULTS_DIR = Path("similarity_results")
+# RECOMMENDATIONS_DIR = Path("recommendations")
 RECOMMENDATIONS_DIR.mkdir(parents=True, exist_ok=True)
 
 THRESHOLD_TOP = 0.8  # Umbral de decisión para considerar activo
@@ -18,7 +20,7 @@ THRESHOLD_BOTOM = 0.5  # Umbral de decisión para considerar inactivo
 
 # Cargar modelo entrenado
 print("Cargando modelo de Leishmania...")
-clf = joblib.load("models/leishmania_model_v1.pkl")
+clf = joblib.load(LEISHMANIA_MODEL_PATH)
 print("Modelo cargado exitosamente.")
 
 # 🧬 Función para obtener fingerprint desde SMILES
