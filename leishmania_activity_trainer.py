@@ -10,6 +10,7 @@ from itertools import islice
 import joblib
 import os
 from rdkit import RDLogger
+from constants import LEISHMANIA_MODEL_PATH, LEISHMANIA_SPECIES, MAX_VALUE_UM_IC50
 
 RDLogger.DisableLog('rdApp.*')
 
@@ -21,13 +22,6 @@ def get_fingerprint(smiles):
     arr = np.zeros((2048,))
     DataStructs.ConvertToNumpyArray(fp, arr)
     return arr
-
-# Obtener resultados de actividad para Leishmania
-# Filtrar por tipo estándar "IC50" y organismos diana específicos
-LEISHMANIA_SPECIES = ["Leishmania major", "Leishmania donovani", "Leishmania infantum", 
-                      "Leishmania mexicana", "Leishmania braziliensis"]
-
-MAX_VALUE_UM_IC50 = 20.0
 
 activity = new_client.activity
 active_results = activity.filter(standard_type="IC50", 
@@ -102,10 +96,7 @@ print("Modelo entrenado exitosamente")
 
 # Guardar el modelo entrenado
 os.makedirs("models", exist_ok=True)
-joblib.dump(clf, 'models/leishmania_model_v1.pkl')
-
-# Cargar el modelo entrenado
-# clf = joblib.load('models/leishmania_model_v1.pkl')
+joblib.dump(clf, LEISHMANIA_MODEL_PATH)
 
 # Evaluar
 y_pred = clf.predict(X_test)

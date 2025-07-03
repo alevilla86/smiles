@@ -1,9 +1,9 @@
 import pandas as pd
-from pathlib import Path
+from constants import RECOMMENDATIONS_DIR
 
 def combine_excel_files():
     print("Recomendaciones finales combinadas y guardadas en 'RECOMENDACION_FINAL.xlsx'")
-    folder_path = Path("recommendations")
+    folder_path = RECOMMENDATIONS_DIR
     excel_files = list(folder_path.glob("*.csv"))
     dfs = []
 
