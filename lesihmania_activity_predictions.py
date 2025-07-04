@@ -23,7 +23,7 @@ print("Cargando modelo de Leishmania...")
 clf = joblib.load(LEISHMANIA_MODEL_PATH)
 print("Modelo cargado exitosamente.")
 
-# 🧬 Función para obtener fingerprint desde SMILES
+# Función para obtener fingerprint desde SMILES
 def get_fingerprint(smiles):
     mol = Chem.MolFromSmiles(smiles)
     if mol is None:
@@ -109,6 +109,32 @@ def add_leishmania_prediction_columns():
         #output_excel = RECOMMENDATIONS_DIR / f"{ref_smiles}_recommendations.xlsx"
         #df_sorted.to_excel(output_excel, index=False)
         reorder_columns(df_sorted, ref_smiles)
+
+def calculate_leishmania_activity(smiles_list):
+    """
+    Calcula la actividad de Leishmania para una lista de SMILES.
+    Retorna un DataFrame con las columnas:
+    - SMILES
+    - Probabilidad de ser activo
+    - Actividad predicha (Alta, Media, Baja)
+    """
+    results = []
+    
+    for smiles in smiles_list:
+        fp = get_fingerprint(smiles)
+        if fp is not None:
+            prob = clf.predict_proba([fp])[0][1]  # Probabilidad de ser activo
+            results.append({
+                "SMILES": smiles,
+                "Probabilidad de ser activo": prob
+            })
+        else:
+            results.append({
+                "SMILES": smiles,
+                "Probabilidad de ser activo": None
+            })
+    
+    return pd.DataFrame(results)
 
 if __name__ == "__main__":
 
