@@ -57,13 +57,25 @@ st.markdown(f"""
             color: #2a2a2a;
         }}
 
-        h1, h2, h3, h4, h5, h6 {{
+        h1{{
             font-family: 'USAL', serif !important; /* Ensure headers also use it */
-            color: #990000; /* USAL red */
+            color: #d22020; /* USAL red */
+        }}
+
+        h1, [class^="stMarkdown"] h1{{
+            font-family: 'USAL', serif !important; /* Ensure headers also use it */
+            color: #d22020; /* USAL red */
         }}
 
         .stTextArea > div > div > textarea {{
             font-family: 'monospace'; /* Keep text area as monospace for SMILES */
+        }}
+
+        /* Aplica el color a las etiquetas de los text_area */
+        .stTextArea label,
+        .stTextArea label span,
+        .stTextArea label div {{
+            color: #2a2a2a !important;
         }}
 
         .block-container {{
@@ -84,7 +96,7 @@ st.markdown(f"""
 
         /* Target Streamlit buttons correctly */
         .stButton > button {{
-            background-color: #990000 !important;
+            background-color: #d22020 !important;
             color: white !important;
             border: none !important;
             font-family: 'USAL', serif !important;
@@ -111,10 +123,10 @@ st.markdown(f"""
 
 st.markdown("<h1>Departamento de Ciencias Farmacéuticas - USAL</h1>", unsafe_allow_html=True)
 
-st.markdown("<h6>Predice actividad contra leishmania con IC50 < 10 µM.</h6>", unsafe_allow_html=True)
+st.markdown("<h6>Herramienta para predecir actividad contra Leishmania* con IC50 < 10 µM.</h6>", unsafe_allow_html=True)
 
 smiles_input = st.text_area(
-    label="Ingrese una lista de SMILES (uno por línea):",
+    label="Ingrese uno o más SMILES (uno por línea):",
     height=200,
     placeholder="Ejemplo:\nCC(=O)Oc1ccccc1C(=O)O\nCCN(CC)CC\nC1=CC=CN=C1"
 )
@@ -127,13 +139,19 @@ if st.button("Predecir actividad"):
     else:
         st.warning("Por favor, ingrese al menos un SMILES.")
 
-st.markdown("<h4>Recuerde que:.</h4>", unsafe_allow_html=True)
+st.markdown("<h4>Recuerde que:</h4>", unsafe_allow_html=True)
 st.markdown("<h6>Una probabilidad mayor a 0,5 indica actividad potencial.</h6>", unsafe_allow_html=True)
 st.markdown("<h6>Mayor probabilidad no indica mayor actividad.</h6>", unsafe_allow_html=True)
 
 st.markdown("""
+<span style="font-size: 0.9rem; color: #555; margin-top: 3rem; font-style: italic;">
+    * L. major, L. donovani, L. infantum, L. mexicana, L. braziliensis
+</span>
+""", unsafe_allow_html=True)
+
+st.markdown("""
 <p style="font-size: 0.9rem; color: #555; margin-top: 3rem;">
-    © 2025 - Aplicación desarrollada por CENFOTEC para el Departamento de Ciencias Farmacéuticas de la Universidad de Salamanca.<br>
+    © 2025 - Aplicación desarrollada por estudiantes de Maestría del Solftware con énfasis en Inteligencia Artificial de Universidad CENFOTEC para el Departamento de Ciencias Farmacéuticas de la Universidad de Salamanca.<br>
     Para consultas técnicas, puede escribir a <a href="mailto:avillalobosh@ucenfotec.ac.cr">avillalobosh@ucenfotec.ac.cr</a>.
 </p>
 """, unsafe_allow_html=True)
