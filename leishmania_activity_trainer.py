@@ -7,6 +7,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
 from itertools import islice
+from pprint import pprint
 import joblib
 import os
 from rdkit import RDLogger
@@ -27,7 +28,7 @@ activity = new_client.activity
 active_results = activity.filter(standard_type="IC50", 
                                  target_organism__in=LEISHMANIA_SPECIES,
                                  units="uM",
-                                 value__lt=MAX_VALUE_UM_IC50,).only(['molecule_chembl_id', 'molecule_structures', 'value', 'units', 'target_organism'])
+                                 value__lt=MAX_VALUE_UM_IC50,).only(['molecule_chembl_id', 'value', 'units', 'target_organism', 'canonical_smiles', 'assay_description', 'record_id', 'document_year', 'document_journal'])
 print(f"Total de compuestos activos para alguna de las especies de Leishmania encontrados: {len(active_results)}")
 
 print(f"Resultados de actividad para Leishmania: {len(active_results)} compuestos")
@@ -36,48 +37,67 @@ print(f"Resultados de actividad para Leishmania: {len(active_results)} compuesto
 active_df = pd.DataFrame(active_results)
 print("Compuestos activos convertidos a DataFrame")
 
-active_compound_ids = set(active_df['molecule_chembl_id'].dropna())
-print(f"Total de compuestos activos únicos encontrados: {len(active_compound_ids)}")
+active_df.to_csv("active_leishmania_compounds_CHEMBL_for_training.csv", index=False)
+
+active_compound_smiles = set(active_df['canonical_smiles'].dropna())
+total_unique_valid_compound_smiles = len(active_compound_smiles)
+print(f"Total de compuestos activos únicos encontrados: {total_unique_valid_compound_smiles}")
 
 molecule = new_client.molecule
 
 # Para crear un dataset de moléculas que no son activas contra Leishmania
 # Obtener todas las moléculas bioactivas
+print("Obteniendo todas las moléculas bioactivas de ChEMBL...")
 all_bioactive = molecule.filter(has_bioactivity="1").only(['molecule_chembl_id', 'molecule_structures'])
-all_bioactiv_top40k = list(islice(all_bioactive, 20000))
-print(f"Total de compuestos bioactivos encontrados: {len(all_bioactiv_top40k)}")
+print(f"Obtenidas todas las moléculas bioactivas {len(all_bioactive)}")
+
+all_bioactiv_top = list(islice(all_bioactive, total_unique_valid_compound_smiles * 2))
+print(f"Reducimos la lista de compuestos bioactivos encontrados: {len(all_bioactiv_top)}")
 
 # Filtrar las que no tienen actividad contra Leishmania
-non_leishmania = [m for m in all_bioactiv_top40k if m['molecule_chembl_id'] not in active_compound_ids]
-print(f"Total de compuestos no Leishmania encontrados: {len(non_leishmania)}")
+non_leishmania = [
+    m for m in all_bioactiv_top
+    if m.get('molecule_structures') and
+       m['molecule_structures'].get('canonical_smiles') and
+       m['molecule_structures']['canonical_smiles'] not in active_compound_smiles
+]
+
+non_leishmania_parsed = [
+    {
+        'molecule_chembl_id': m['molecule_chembl_id'],
+        'canonical_smiles': m['molecule_structures']['canonical_smiles']
+    }
+    for m in non_leishmania
+]
+
+#non_leishmania = [m for m in all_bioactiv_top if m['molecule_structures']['canonical_smiles'] not in active_compound_smiles['canonical_smiles']]
+print(f"Total de compuestos bioactivos NO Leishmania encontrados: {len(non_leishmania_parsed)}")
 
 # Limitar el número de moléculas no Leishmania al mismo número que las activas
 # Esto es para balancear el dataset
-non_leishmania = non_leishmania[:len(active_compound_ids)]
-print(f"Total de compuestos no Leishmania seleccionados: {len(non_leishmania)}")
+non_leishmania_smiles = non_leishmania_parsed[:len(active_compound_smiles)]
+print(f"Total de compuestos no Leishmania seleccionados: {len(non_leishmania_smiles)}")
+
+non_active_df = pd.DataFrame(non_leishmania_smiles)
+print("Compuestos no Leishmania convertidos a DataFrame")
+non_active_df.to_csv("active_NOT_leishmania_compounds_CHEMBL_for_training.csv", index=False)
 
 # Positivos
 positive_samples = []
-for mol_id in active_compound_ids:
-    mol_data = molecule.get(mol_id)
-    if 'molecule_structures' in mol_data and mol_data['molecule_structures']:
-        smiles = mol_data['molecule_structures']['canonical_smiles']
-        fp = get_fingerprint(smiles)
-        if fp is not None:
-            positive_samples.append((fp, 1))
-
-print("Procesdos los smiles de los compuestos activos contra Leishmania")
+for smiles in active_compound_smiles:
+    fp = get_fingerprint(smiles)
+    if fp is not None:
+        positive_samples.append((fp, 1))
+print(f"Procesados los smiles de los compuestos activos contra Leishmania {len(positive_samples)}")
 
 # Negativos
 negative_samples = []
-for mol_data in non_leishmania:
-    if 'molecule_structures' in mol_data and mol_data['molecule_structures']:
-        smiles = mol_data['molecule_structures']['canonical_smiles']
-        fp = get_fingerprint(smiles)
-        if fp is not None:
-            negative_samples.append((fp, 0))
-
-print("Procesdos los smiles de los compuestos no activos contra Leishmania")
+for negative_smiles in non_leishmania_smiles:
+    compound_smiles = negative_smiles['canonical_smiles']
+    fp = get_fingerprint(compound_smiles)
+    if fp is not None:
+        negative_samples.append((fp, 0))
+print(f"Procesados los smiles de los compuestos no activos contra Leishmania {len(negative_samples)}")
 
 # Combinar los datos positivos y negativos
 all_data = positive_samples + negative_samples
