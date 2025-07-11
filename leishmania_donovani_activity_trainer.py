@@ -49,65 +49,24 @@ leishmania_donovani_active_compound_smiles = get_active_compounds_unique_smiles(
 total_unique_leishmania_donovani_compound_smiles = len(leishmania_donovani_active_compound_smiles)
 print(f"Total de compuestos activos únicos encontrados contra L. donovani: {total_unique_leishmania_donovani_compound_smiles}")
 
-# Repetimos el proceso para obtener compuestos activos contra las otras especies de Leishmania.
-leishmania_not_donovani_active_compound_smiles = get_active_compounds_unique_smiles(LEISHMANIA_SPECIES_NOT_DONOVANI, MAX_VALUE_UM_IC50)
-# Quitamos los compuestos que ya están en L. donovani
-leishmania_not_donovani_active_compound_smiles = leishmania_not_donovani_active_compound_smiles - leishmania_donovani_active_compound_smiles
-# Del total de compuestos activos contra Leishmania NO donovani, obtenemos una muestra al azar de la mitad de los compuestos activos.
-leishmania_not_donovani_active_compound_smiles = random.sample(list(leishmania_not_donovani_active_compound_smiles), 
-                                                              k=int(total_unique_leishmania_donovani_compound_smiles // 4))
-total_unique_leishmania_not_donovani_compound_smiles = len(leishmania_not_donovani_active_compound_smiles)
-print(f"Total de compuestos activos únicos encontrados contra L. no donovani: {total_unique_leishmania_not_donovani_compound_smiles}")
-
-total_leishmania_compounds_smiles = total_unique_leishmania_donovani_compound_smiles + total_unique_leishmania_not_donovani_compound_smiles
-
+# Paso 1: Cargar el SDF de ChEMBL
 # Para crear un dataset de moléculas que no son activas contra Leishmania
-# Obtener todas las moléculas bioactivas
-print("Obteniendo todas las moléculas bioactivas de ChEMBL...")
-all_bioactive = molecule.filter(has_bioactivity="1").only(['molecule_chembl_id', 'molecule_structures'])
-print(f"Obtenidas todas las moléculas bioactivas {len(all_bioactive)}")
+# Obtener una muestra aleatoria de moléculas de ChemBL
+sdf_file_path = "/Users/alejandro/Downloads/chembl_35.sdf"
 
-all_bioactiv_top = list(islice(all_bioactive, total_unique_leishmania_donovani_compound_smiles * 2))
+supplier = Chem.SDMolSupplier(sdf_file_path)
+all_mols = [mol for mol in supplier if mol is not None]
 
-# Filtrar las que no tienen actividad contra Leishmania
-non_leishmania_compounds = [
-    m for m in all_bioactiv_top
-    if m.get('molecule_structures') and
-       m['molecule_structures'].get('canonical_smiles') and
-       m['molecule_structures']['canonical_smiles'] not in leishmania_donovani_active_compound_smiles
-]
+print(f"Total de moléculas válidas en el SDF: {len(all_mols)}")
 
-non_leishmania_compounds_dict = [
-    {
-        'molecule_chembl_id': m['molecule_chembl_id'],
-        'canonical_smiles': m['molecule_structures']['canonical_smiles']
-    }
-    for m in non_leishmania_compounds
-]
-print(f"Total de compuestos bioactivos NO Leishmania encontrados: {len(non_leishmania_compounds_dict)}")
+# Paso 2: seleccionar al azar
+sample_size = int(total_unique_leishmania_donovani_compound_smiles + (total_unique_leishmania_donovani_compound_smiles * 0.1))
+sampled_mols = random.sample(all_mols, sample_size)
 
-# Limitar el número de moléculas no Leishmania al mismo número que las activas
-# Esto es para balancear el dataset
-non_leishmania_compounds_dict = non_leishmania_compounds_dict[:total_unique_leishmania_donovani_compound_smiles]
-print(f"Total de compuestos no Leishmania seleccionados: {len(non_leishmania_compounds_dict)}")
+# Paso 3: obtener los SMILES
+sampled_smiles = [Chem.MolToSmiles(mol) for mol in sampled_mols]
 
-total_unique_leishmania_not_donovani_compound_smiles_to_remove = total_unique_leishmania_not_donovani_compound_smiles
-print(f"Vamos a remover {total_unique_leishmania_not_donovani_compound_smiles_to_remove} compuestos de los bioactivos, esto para luego agregar los compuestos activos contra Leishmania NO donovani a la lista de los que deseamos que el modelo interprete como no activos.")
-non_leishmania_compounds_dict = non_leishmania_compounds_dict[
-    :-total_unique_leishmania_not_donovani_compound_smiles_to_remove
-]
-print(f"Total de compuestos no Leishmania después de remover los activos contra Leishmania NO donovani: {len(non_leishmania_compounds_dict)}")
-
-non_active_df = pd.DataFrame(non_leishmania_compounds_dict)
-print("Compuestos no Leishmania convertidos a DataFrame")
-
-# Obtenemos los smiles únicos de los compuestos no activos
-bio_active_compound_smiles = set(non_active_df['canonical_smiles'].dropna())
-
-# Le agregamos los compuestos activos contra Leishmania NO donovani.
-print(f"Agregando {total_unique_leishmania_not_donovani_compound_smiles} compuestos activos contra Leishmania NO donovani a la lista de compuestos no activos.")
-bio_active_compound_smiles = bio_active_compound_smiles.union(leishmania_not_donovani_active_compound_smiles)
-print(f"Total de compuestos no Leishmania después de agregar los activos contra Leishmania NO donovani: {len(bio_active_compound_smiles)}")
+print(f"Total de SMILES aleatorios obtenidos de las moléculas muestreadas: {len(sampled_smiles)}")
 
 # Positivos
 donovani_positive_samples = []
@@ -119,7 +78,7 @@ print(f"Procesados los smiles de los compuestos activos contra Leishmania {len(d
 
 # Negativos
 negative_samples = []
-for negative_smiles in bio_active_compound_smiles:
+for negative_smiles in sampled_smiles:
     fp = get_fingerprint(negative_smiles)
     if fp is not None:
         negative_samples.append((fp, 0))

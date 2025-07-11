@@ -14,3 +14,5 @@ LEISHMANIA_SPECIES_NOT_DONOVANI = ["Leishmania major", "Leishmania infantum",
                       "Leishmania mexicana", "Leishmania braziliensis"]
 
 MAX_VALUE_UM_IC50 = 10.0
+
+BENZIMIDAZOLE_SMILES = "c1cc2c(c(c1))ncn2"

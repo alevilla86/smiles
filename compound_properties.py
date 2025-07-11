@@ -1,5 +1,6 @@
 from rdkit import Chem
 from rdkit.Chem import rdMolDescriptors, Crippen
+from constants import BENZIMIDAZOLE_SMILES
 
 class CompoundProperties:
     """
@@ -53,6 +54,6 @@ class CompoundProperties:
         }
     
     def has_benzimidazole(self):
-        benzimidazole_smiles = Chem.MolFromSmarts('c1cc2c(c(c1))ncn2')
+        benzimidazole_smiles = Chem.MolFromSmarts(BENZIMIDAZOLE_SMILES)
         mol = Chem.MolFromSmiles(self.smiles)
         return mol.HasSubstructMatch(benzimidazole_smiles) if mol else False
