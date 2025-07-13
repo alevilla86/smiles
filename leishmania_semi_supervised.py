@@ -95,8 +95,8 @@ class Autoencoder(nn.Module):
         return self.encoder(x)
 
 # Initialize autoencoder
-ae = Autoencoder(input_dim=2048, hidden_dim=512, code_dim=128)
-print(f"Autoencoder initialized: encoding 2048 -> 128 dimensions")
+ae = Autoencoder(input_dim=2048, hidden_dim=512, code_dim=256)
+print(f"Autoencoder initialized: encoding 2048 -> 256 dimensions")
 
 # Define loss and optimizer for the autoencoder
 criterion_ae = nn.BCELoss()  # binary cross-entropy loss, good for reconstructing 0/1 bits
@@ -127,21 +127,22 @@ with torch.no_grad():
 
 print(f"Latent feature shape: {X_train_latent.shape} (should be [n_samples, 128])")
 
-# 7. Define a classifier network that takes latent vectors and outputs a probability of being active
 class ActivityClassifier(nn.Module):
-    def __init__(self, input_dim=128):
-        super(ActivityClassifier, self).__init__()
+    def __init__(self, input_dim, dropout=0.2):
+        super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(input_dim, 32),
+            nn.Linear(input_dim, 64),
             nn.ReLU(),
-            nn.Linear(32, 1)  # single output (logit) for binary classification
+            nn.Dropout(dropout),
+            nn.Linear(64, 1)    # logit
         )
     def forward(self, x):
         return self.net(x)
 
 clf = ActivityClassifier(input_dim=X_train_latent.shape[1])
 criterion_clf = nn.BCEWithLogitsLoss()  # binary cross-entropy loss with logits
-optimizer_clf = torch.optim.Adam(clf.parameters(), lr=0.001)
+# L2 weight-decay: set weight_decay > 0
+optimizer_clf = torch.optim.Adam(clf.parameters(), lr=1e-3, weight_decay=1e-4)
 
 # Convert latent features and labels to tensors for training
 X_train_latent_tensor = torch.tensor(X_train_latent, dtype=torch.float32)
