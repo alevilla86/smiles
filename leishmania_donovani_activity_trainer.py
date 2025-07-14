@@ -68,6 +68,14 @@ sampled_smiles = [Chem.MolToSmiles(mol) for mol in sampled_mols]
 
 print(f"Total de SMILES aleatorios obtenidos de las moléculas muestreadas: {len(sampled_smiles)}")
 
+with open('l_donovani_ACTIVE.txt', 'w') as file:
+    for item in leishmania_donovani_active_compound_smiles:
+        file.write(f"{item}\n")
+
+with open('l_donovani_NOT_ACTIVE.txt', 'w') as file:
+    for item in sampled_smiles:
+        file.write(f"{item}\n")
+
 # Positivos
 donovani_positive_samples = []
 for smiles in leishmania_donovani_active_compound_smiles:
