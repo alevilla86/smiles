@@ -9,13 +9,19 @@ from sklearn.metrics import classification_report, accuracy_score
 
 print("Starting semi-supervised learning for Leishmania compound activity prediction...")
 
-# 1. Load the dataset of compounds active and inactive against Leishmania
-active_df = pd.read_csv("active_leishmania_compounds_CHEMBL_for_training.csv")
-nonactive_df = pd.read_csv("active_NOT_leishmania_compounds_CHEMBL_for_training.csv")
+# 1. Load active / inactive SMILES lists from TXT files
+#    (one SMILES per line, no header)
+# ────────────────────────────────────────────────────────────────
+with open("l_donovani_ACTIVE.txt") as f:
+    active_smiles = [ln.strip() for ln in f if ln.strip()]
 
-# Extract unique SMILES for active and inactive compounds
-active_smiles = list(set(active_df['canonical_smiles'].dropna()))
-nonactive_smiles = list(set(nonactive_df['canonical_smiles'].dropna()))
+with open("l_donovani_NOT_ACTIVE.txt") as f:
+    nonactive_smiles = [ln.strip() for ln in f if ln.strip()]
+
+# remove duplicates
+active_smiles      = list(set(active_smiles))
+nonactive_smiles   = list(set(nonactive_smiles))
+
 
 # Ensure both lists are equal length (for balanced classes)
 if len(nonactive_smiles) > len(active_smiles):
