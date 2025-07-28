@@ -12,7 +12,7 @@ import joblib
 import os
 import random
 from rdkit import RDLogger
-from constants import LEISHMANIA_MODEL_PATH, LEISHMANIA_DONOVANI_MODEL_PATH, LEISHMANIA_SPECIES_DONOVANI, LEISHMANIA_SPECIES_NOT_DONOVANI, MAX_VALUE_UM_IC50
+from constants import LEISHMANIA_MODEL_PATH, LEISHMANIA_DONOVANI_MODEL_PATH, LEISHMANIA_SPECIES_DONOVANI, LEISHMANIA_SPECIES_NOT_DONOVANI, MAX_VALUE_UM_IC50, ACTIVE_BENZIMIDAZOLE_COMPOUNDS_MANUAL_SEARCH, NON_ACTIVE_BENZIMIDAZOLE_COMPOUNDS_MANUAL_SEARCH
 
 RDLogger.DisableLog('rdApp.*')
 
@@ -46,6 +46,14 @@ def get_active_compounds_unique_smiles(leshmania_species=LEISHMANIA_SPECIES_DONO
     return active_compound_smiles
 
 leishmania_donovani_active_compound_smiles = get_active_compounds_unique_smiles(LEISHMANIA_SPECIES_DONOVANI, MAX_VALUE_UM_IC50)
+print(f"Total de compuestos activos únicos encontrados contra L. donovani en ChemBL: {len(leishmania_donovani_active_compound_smiles)}")
+
+# Vamos a agregar los compuestos ACTIVOS descubiertos de manera manual en la literatura
+additional_active_compoundsmiles = ACTIVE_BENZIMIDAZOLE_COMPOUNDS_MANUAL_SEARCH
+print(f"Total de SMILES activos obtenidos manualmente: {len(additional_active_compoundsmiles)}")
+
+leishmania_donovani_active_compound_smiles.update(additional_active_compoundsmiles)
+
 total_unique_leishmania_donovani_compound_smiles = len(leishmania_donovani_active_compound_smiles)
 print(f"Total de compuestos activos únicos encontrados contra L. donovani: {total_unique_leishmania_donovani_compound_smiles}")
 
@@ -61,12 +69,19 @@ print(f"Total de moléculas válidas en el SDF: {len(all_mols)}")
 
 # Paso 2: seleccionar al azar
 sample_size = int(total_unique_leishmania_donovani_compound_smiles + (total_unique_leishmania_donovani_compound_smiles * 0.1))
+#sample_size = int((total_unique_leishmania_donovani_compound_smiles - len(NON_ACTIVE_BENZIMIDAZOLE_COMPOUNDS_MANUAL_SEARCH)) + (total_unique_leishmania_donovani_compound_smiles * 0.10))  # 10% más que los activos
 sampled_mols = random.sample(all_mols, sample_size)
 
-# Paso 3: obtener los SMILES
+# Paso 3: obtener los SMILES no activos en una lista.
 sampled_smiles = [Chem.MolToSmiles(mol) for mol in sampled_mols]
+print(f"Total de SMILES aleatorios no activos obtenidos: {len(sampled_smiles)}")
 
-print(f"Total de SMILES aleatorios obtenidos de las moléculas muestreadas: {len(sampled_smiles)}")
+# Vamos a agregar los compuestos NO ACTIVOS descubiertos de manera manual en la literatura
+additional_not_active_compoundsmiles = NON_ACTIVE_BENZIMIDAZOLE_COMPOUNDS_MANUAL_SEARCH
+print(f"Total de SMILES no activos obtenidos manualmente: {len(additional_not_active_compoundsmiles)}")
+
+sampled_smiles.extend(additional_not_active_compoundsmiles)
+print(f"Total de SMILES aleatorios SIN ACTIVIDAD obtenidos de las moléculas muestreadas: {len(sampled_smiles)}")
 
 with open('l_donovani_ACTIVE.txt', 'w') as file:
     for item in leishmania_donovani_active_compound_smiles:
