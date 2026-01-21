@@ -7,6 +7,9 @@ RECOMMENDATIONS_DIR = Path("recommendations")
 LEISHMANIA_MODEL_PATH = "models/leishmania_model_v3.pkl"
 LEISHMANIA_DONOVANI_MODEL_PATH = "models/leishmania_donovani_model_v4.pkl"
 
+LEISHMANIA_DONOVANI_VAE_AE_MODEL_PATH = "models/leishmania_donovani_vae_ae.pth"
+LEISHMANIA_DONOVANI_VAE_CLF_MODEL_PATH = "models/leishmania_donovani_vae_clf.pth"
+
 LEISHMANIA_SPECIES = ["Leishmania major", "Leishmania donovani", "Leishmania infantum", 
                       "Leishmania mexicana", "Leishmania braziliensis"]
 LEISHMANIA_SPECIES_DONOVANI = ["Leishmania donovani"]

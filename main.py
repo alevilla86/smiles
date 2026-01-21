@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import lesihmania_activity_predictions
+from leishmania_semi_supervised import LeishmaniaPyTorchPredictor
 import base64
 import os
 
@@ -134,7 +135,15 @@ smiles_input = st.text_area(
 if st.button("Predecir actividad"):
     if smiles_input.strip():
         smiles_list = [s.strip() for s in smiles_input.strip().splitlines() if s.strip()]
+
+        # USE RANDOM FOREST MODEL
         probabilities_df = lesihmania_activity_predictions.calculate_leishmania_activity(smiles_list)
+
+        # USE PYTORCH SEMI-SUPERVISED MODEL
+        # leishmania_predictor = LeishmaniaPyTorchPredictor()
+        # probabilities_df = leishmania_predictor.calculate_leishmania_activity(smiles_list)
+
+        
         st.dataframe(probabilities_df, use_container_width=True)
     else:
         st.warning("Por favor, ingrese al menos un SMILES.")
