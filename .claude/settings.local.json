@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c:*)",
+      "Bash(python3:*)",
+      "Bash(streamlit run:*)",
+      "Bash(/Users/alejandro/Development/smiles/venv/bin/streamlit run:*)",
+      "Bash(/Users/alejandro/Development/smiles/venv/bin/python:*)"
+    ]
+  }
+}

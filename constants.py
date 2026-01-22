@@ -1,24 +1,44 @@
 from pathlib import Path
+from enum import Enum
 
-SIMILARITY_RESULTS_DIR = Path("similarity_results")
-RECOMMENDATIONS_DIR = Path("recommendations")
+MODELS_DIR = Path("models")
+TRAINING_DATA_DIR = Path("training_data")
 
-# Leishmania model configuration
-LEISHMANIA_MODEL_PATH = "models/leishmania_model_v3.pkl"
-LEISHMANIA_DONOVANI_MODEL_PATH = "models/leishmania_donovani_model_v4.pkl"
 
-LEISHMANIA_DONOVANI_VAE_AE_MODEL_PATH = "models/leishmania_donovani_vae_ae.pth"
-LEISHMANIA_DONOVANI_VAE_CLF_MODEL_PATH = "models/leishmania_donovani_vae_clf.pth"
+# UI Configuration
+class UIConfig:
+    PAGE_TITLE = "Departamento de Ciencias Farmacéuticas - USAL"
+    PAGE_ICON = "🧪"
+    FONT_FILENAME = "VITOR.otf"
 
-LEISHMANIA_SPECIES = ["Leishmania major", "Leishmania donovani", "Leishmania infantum", 
-                      "Leishmania mexicana", "Leishmania braziliensis"]
+    # Colors (USAL branding)
+    PRIMARY_COLOR = "#d22020"
+    PRIMARY_HOVER = "#800000"
+    PRIMARY_FOCUS = "#990000"
+    TEXT_COLOR = "#2a2a2a"
+    BACKGROUND_COLOR = "#ffffff"
+    MUTED_TEXT_COLOR = "#555"
+
+
+# Prediction thresholds
+class PredictionThreshold:
+    HIGH = 0.8
+    MEDIUM = 0.5
+
+
+class PredictorType(Enum):
+    RANDOM_FOREST = "random_forest"
+    VAE = "vae"
+
+
+# Model name prefixes (used with get_latest_model)
+RF_MODEL_PREFIX = "leishmania_donovani_rf"
+VAE_AE_MODEL_PREFIX = "leishmania_donovani_vae_ae"
+VAE_CLF_MODEL_PREFIX = "leishmania_donovani_vae_clf"
+
 LEISHMANIA_SPECIES_DONOVANI = ["Leishmania donovani"]
-LEISHMANIA_SPECIES_NOT_DONOVANI = ["Leishmania major", "Leishmania infantum", 
-                      "Leishmania mexicana", "Leishmania braziliensis"]
 
 MAX_VALUE_UM_IC50 = 10.0
-
-BENZIMIDAZOLE_SMILES = "c1cc2c(c(c1))ncn2"
 
 ACTIVE_BENZIMIDAZOLE_COMPOUNDS_MANUAL_SEARCH = [
     "CC(C)(C)C(C=C1)=CC=C1CN2C3=CC=CC=C3N4C2=NCC4",

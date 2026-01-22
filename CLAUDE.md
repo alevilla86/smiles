@@ -24,10 +24,13 @@ python leishmania_donovani_activity_trainer.py
 python leishmania_semi_supervised.py
 ```
 
+Models are saved with timestamped filenames including test accuracy:
+- Format: `{model_name}_{YYYY-MM-DD_HH-MM-SS}_acc{accuracy}.{ext}`
+- Example: `leishmania_donovani_rf_2025-01-22_14-30-45_acc0.9523.pkl`
+
 ### Running Tests
 ```bash
 python leishmania_activity_tests.py  # Tests with USAL compounds
-python tests.py                       # General tests
 ```
 
 ### Installing Dependencies
@@ -40,27 +43,31 @@ pip install -r requirements.txt
 ### Entry Point
 - `main.py` - Streamlit web application for interactive predictions
 
-### ML Models (Two Approaches)
+### Prediction System
+- `predictors.py` - Predictor factory with unified interface (`BasePredictor`)
+  - `RandomForestPredictor` - Primary model using Morgan fingerprints
+  - `VAEPredictor` - Experimental semi-supervised model
+  - `create_predictor(PredictorType)` - Factory function to switch models
+- To switch models, change `ACTIVE_PREDICTOR` in `main.py`
+
+### ML Models
 
 **Random Forest (Active/Primary):**
-- `lesihmania_activity_predictions.py` - Prediction module (note: filename has typo)
 - `leishmania_donovani_activity_trainer.py` - Training pipeline
 - Model: `models/leishmania_donovani_model_v4.pkl`
 - Uses 500-tree Random Forest with Morgan fingerprints (radius=2, 2048 bits)
 
 **Semi-Supervised VAE (Experimental):**
-- `leishmania_semi_supervised.py` - PyTorch VAE + classifier
+- `leishmania_semi_supervised.py` - PyTorch VAE + classifier training
 - Models: `models/leishmania_donovani_vae_ae.pth`, `models/leishmania_donovani_vae_clf.pth`
 - Architecture: 2048 → 512 → 256 (latent) → classifier
 
 ### Core Modules
-- `constants.py` - Configuration, model paths, hardcoded benzimidazole compounds
-- `compound_properties.py` - Molecular descriptor calculation (LogP, TPSA, H-bond donors/acceptors)
-- `similarity_calc.py` - Tanimoto and Cosine similarity calculations
-- `compound_parser.py` - PubChem JSON parsing
+- `constants.py` - Configuration hub: model paths, UI settings (`UIConfig`), prediction thresholds, benzimidazole compounds
+- `model_utils.py` - Model saving utilities with timestamped filenames and accuracy (`save_sklearn_model`, `save_pytorch_model`)
 
 ### Data Files
-- `l_donovani_ACTIVE.txt` / `l_donovani_NOT_ACTIVE.txt` - Training compound SMILES lists
+- `training_data/l_donovani_ACTIVE.txt` / `l_donovani_NOT_ACTIVE.txt` - Training compound SMILES lists
 
 ## Key Dependencies
 - **rdkit** - SMILES parsing, Morgan fingerprints, molecular properties

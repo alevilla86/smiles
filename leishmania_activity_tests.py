@@ -1,10 +1,11 @@
 import joblib
-from constants import LEISHMANIA_MODEL_PATH
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit import DataStructs
 from rdkit import RDLogger
 import numpy as np
+
+from model_utils import get_latest_model
 
 RDLogger.DisableLog('rdApp.*')
 
@@ -31,9 +32,13 @@ USAL_COMPOUNDS = [
     "OC(C1=NC2=CC=CC=C2N1)=O"]
 
 
-# Cargar modelo entrenado
-print("Cargando modelo de Leishmania...")
-clf = joblib.load(LEISHMANIA_MODEL_PATH)
+# Cargar modelo entrenado (el más reciente)
+print("Buscando modelo más reciente...")
+model_path = get_latest_model("leishmania_donovani_rf")
+if model_path is None:
+    raise FileNotFoundError("No se encontró ningún modelo de Random Forest")
+print(f"Cargando modelo: {model_path}")
+clf = joblib.load(model_path)
 print("Modelo cargado exitosamente.")
 
 def get_fingerprint(smiles):

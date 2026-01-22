@@ -7,7 +7,12 @@ import torch
 import torch.nn as nn
 from sklearn.metrics import classification_report, accuracy_score
 
-from constants import LEISHMANIA_DONOVANI_VAE_AE_MODEL_PATH, LEISHMANIA_DONOVANI_VAE_CLF_MODEL_PATH
+from constants import (
+    TRAINING_DATA_DIR,
+    VAE_AE_MODEL_PREFIX,
+    VAE_CLF_MODEL_PREFIX,
+)
+from model_utils import save_pytorch_model, get_latest_model
 
 #Define a function to compute Morgan fingerprint (radius 2, 2048-bit) using RDKit
 def get_fingerprint(smiles: str):
@@ -70,8 +75,18 @@ class LeishmaniaPyTorchPredictor:
     con la MISMA interfaz que el modelo RandomForest.
     """
 
-    def __init__(self, ae_path=LEISHMANIA_DONOVANI_VAE_AE_MODEL_PATH, clf_path=LEISHMANIA_DONOVANI_VAE_CLF_MODEL_PATH):
+    def __init__(self, ae_path=None, clf_path=None):
         print("Cargando modelos PyTorch para Leishmania...")
+
+        if ae_path is None:
+            ae_path = get_latest_model(VAE_AE_MODEL_PREFIX)
+            if ae_path is None:
+                raise FileNotFoundError(f"No VAE autoencoder model found with prefix '{VAE_AE_MODEL_PREFIX}'")
+
+        if clf_path is None:
+            clf_path = get_latest_model(VAE_CLF_MODEL_PREFIX)
+            if clf_path is None:
+                raise FileNotFoundError(f"No VAE classifier model found with prefix '{VAE_CLF_MODEL_PREFIX}'")
 
         # Load autoencoder
         self.ae = Autoencoder()
@@ -128,10 +143,10 @@ if __name__ == "__main__":
     # 1. Load active / inactive SMILES lists from TXT files
     #    (one SMILES per line, no header)
     # ────────────────────────────────────────────────────────────────
-    with open("l_donovani_ACTIVE.txt") as f:
+    with open(TRAINING_DATA_DIR / "l_donovani_ACTIVE.txt") as f:
         active_smiles = [ln.strip() for ln in f if ln.strip()]
 
-    with open("l_donovani_NOT_ACTIVE.txt") as f:
+    with open(TRAINING_DATA_DIR / "l_donovani_NOT_ACTIVE.txt") as f:
         nonactive_smiles = [ln.strip() for ln in f if ln.strip()]
 
     # remove duplicates
@@ -199,9 +214,6 @@ if __name__ == "__main__":
         if epoch % 5 == 0 or epoch == 1:
             print(f"Epoch {epoch:02d}/{num_epochs}, Reconstruction Loss: {loss.item():.4f}")
 
-    # Save the trained autoencoder model for future use
-    torch.save(ae.state_dict(), "autoencoder_model.pth")
-
     # 6. Generate latent feature vectors for train and test sets using the trained encoder
     ae.eval()  # set autoencoder to evaluation mode
     with torch.no_grad():
@@ -246,12 +258,15 @@ if __name__ == "__main__":
         test_probs = torch.sigmoid(test_logits).numpy().flatten()
         y_pred = (test_probs >= 0.5).astype(int)
 
-    # Save the trained models
-    torch.save(ae.state_dict(), LEISHMANIA_DONOVANI_VAE_AE_MODEL_PATH)
-    torch.save(clf.state_dict(), LEISHMANIA_DONOVANI_VAE_CLF_MODEL_PATH)
+    # Calculate accuracy
+    accuracy = accuracy_score(y_test, y_pred)
 
     # Print evaluation metrics
-    print(f"\nTest Accuracy: {accuracy_score(y_test, y_pred):.3f}")
+    print(f"\nTest Accuracy: {accuracy:.4f}")
     print("Classification Report (Test Set):")
     print(classification_report(y_test, y_pred, digits=4))
+
+    # Save the trained models with timestamp and accuracy
+    save_pytorch_model(model=ae, model_name="leishmania_donovani_vae_ae", accuracy=accuracy)
+    save_pytorch_model(model=clf, model_name="leishmania_donovani_vae_clf", accuracy=accuracy)
 
