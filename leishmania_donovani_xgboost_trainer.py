@@ -38,7 +38,7 @@ def train_model(X: np.ndarray, y: np.ndarray) -> tuple[XGBClassifier, float]:
 
     # XGBoost configuration optimized for Morgan fingerprints
     clf = XGBClassifier(
-        n_estimators=300,
+        n_estimators=600,
         max_depth=6,
         learning_rate=0.1,
         subsample=0.8,
@@ -49,7 +49,7 @@ def train_model(X: np.ndarray, y: np.ndarray) -> tuple[XGBClassifier, float]:
         eval_metric='logloss',
     )
 
-    print("  Training XGBoost (300 estimators)...")
+    print("  Training XGBoost (600 estimators)...")
     clf.fit(X_train, y_train)
     print("  Training complete!")
 

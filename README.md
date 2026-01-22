@@ -72,7 +72,7 @@ python leishmania_donovani_activity_trainer.py --from-scratch
 The XGBoost model uses the same Morgan fingerprints as Random Forest but with gradient boosting, which often performs well on sparse, high-dimensional binary features.
 
 **Configuration:**
-- 300 estimators with max depth of 6
+- 600 estimators with max depth of 6
 - Learning rate: 0.1
 - Subsampling: 80% of rows and columns per tree
 - Histogram-based tree method (efficient for sparse data)
@@ -207,7 +207,7 @@ save_training_data(active_smiles, inactive_smiles)
 │                      MODEL TRAINING                              │
 ├─────────────────────────────────────────────────────────────────┤
 │  Option A: Random Forest (500 trees)                            │
-│  Option B: XGBoost (300 estimators, gradient boosting)          │
+│  Option B: XGBoost (600 estimators, gradient boosting)          │
 │  Option C: VAE Autoencoder + Classifier                         │
 │                                                                  │
 │  Train/Test Split: 80/20 (stratified)                           │
