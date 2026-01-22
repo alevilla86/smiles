@@ -10,13 +10,11 @@ Usage:
 """
 import argparse
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pandas as pd
 import random
-from rdkit import Chem, DataStructs, RDLogger
-from rdkit.Chem import AllChem
+from rdkit import Chem
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, accuracy_score
 from sklearn.model_selection import train_test_split
@@ -26,27 +24,12 @@ from constants import (
     MAX_VALUE_UM_IC50,
     ACTIVE_BENZIMIDAZOLE_COMPOUNDS_MANUAL_SEARCH,
     NON_ACTIVE_BENZIMIDAZOLE_COMPOUNDS_MANUAL_SEARCH,
-    TRAINING_DATA_DIR,
 )
+from data_loader import load_training_data, save_training_data
+from fingerprint_utils import prepare_fingerprints
 from model_utils import save_sklearn_model
 
-RDLogger.DisableLog('rdApp.*')
-
-# File paths for cached data
-ACTIVE_SMILES_FILE = TRAINING_DATA_DIR / "l_donovani_ACTIVE.txt"
-INACTIVE_SMILES_FILE = TRAINING_DATA_DIR / "l_donovani_NOT_ACTIVE.txt"
 CHEMBL_SDF_PATH = Path("external_data") / "chembl_35.sdf"
-
-
-def get_fingerprint(smiles: str) -> Optional[np.ndarray]:
-    """Convert SMILES to Morgan fingerprint."""
-    mol = Chem.MolFromSmiles(smiles)
-    if mol is None:
-        return None
-    fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=2, nBits=2048)
-    arr = np.zeros((2048,))
-    DataStructs.ConvertToNumpyArray(fp, arr)
-    return arr
 
 
 def fetch_active_compounds_from_chembl() -> set[str]:
@@ -117,67 +100,9 @@ def prepare_data_from_scratch() -> tuple[list[str], list[str]]:
     print(f"  Total inactive compounds: {len(inactive_smiles)}")
 
     # Save to files for future use
-    print(f"\nSaving data to {ACTIVE_SMILES_FILE} and {INACTIVE_SMILES_FILE}...")
-    with open(ACTIVE_SMILES_FILE, 'w') as f:
-        for smiles in active_smiles:
-            f.write(f"{smiles}\n")
-
-    with open(INACTIVE_SMILES_FILE, 'w') as f:
-        for smiles in inactive_smiles:
-            f.write(f"{smiles}\n")
+    save_training_data(list(active_smiles), inactive_smiles)
 
     return list(active_smiles), inactive_smiles
-
-
-def load_existing_data() -> tuple[list[str], list[str]]:
-    """Load training data from existing txt files (fast)."""
-    print("\n=== LOADING EXISTING DATA ===\n")
-
-    if not ACTIVE_SMILES_FILE.exists() or not INACTIVE_SMILES_FILE.exists():
-        raise FileNotFoundError(
-            f"Data files not found: {ACTIVE_SMILES_FILE}, {INACTIVE_SMILES_FILE}\n"
-            "Run with --from-scratch first to generate the data files."
-        )
-
-    with open(ACTIVE_SMILES_FILE) as f:
-        active_smiles = [line.strip() for line in f if line.strip()]
-
-    with open(INACTIVE_SMILES_FILE) as f:
-        inactive_smiles = [line.strip() for line in f if line.strip()]
-
-    print(f"  Loaded {len(active_smiles)} active compounds")
-    print(f"  Loaded {len(inactive_smiles)} inactive compounds")
-
-    return active_smiles, inactive_smiles
-
-
-def prepare_fingerprints(active_smiles: list[str], inactive_smiles: list[str]) -> tuple[np.ndarray, np.ndarray]:
-    """Convert SMILES to fingerprints and prepare training data."""
-    print("\n=== PREPARING FINGERPRINTS ===\n")
-
-    # Process active compounds
-    positive_samples = []
-    for smiles in active_smiles:
-        fp = get_fingerprint(smiles)
-        if fp is not None:
-            positive_samples.append((fp, 1))
-    print(f"  Processed {len(positive_samples)} active compounds")
-
-    # Process inactive compounds
-    negative_samples = []
-    for smiles in inactive_smiles:
-        fp = get_fingerprint(smiles)
-        if fp is not None:
-            negative_samples.append((fp, 0))
-    print(f"  Processed {len(negative_samples)} inactive compounds")
-
-    # Combine data
-    all_data = positive_samples + negative_samples
-    X = np.array([x[0] for x in all_data])
-    y = np.array([x[1] for x in all_data])
-
-    print(f"  Total samples: {len(X)}")
-    return X, y
 
 
 def train_model(X: np.ndarray, y: np.ndarray) -> tuple[RandomForestClassifier, float]:
@@ -225,7 +150,7 @@ def main():
 
     # Load or prepare data
     if args.use_existing:
-        active_smiles, inactive_smiles = load_existing_data()
+        active_smiles, inactive_smiles = load_training_data()
     else:
         active_smiles, inactive_smiles = prepare_data_from_scratch()
 

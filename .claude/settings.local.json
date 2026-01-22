@@ -5,7 +5,10 @@
       "Bash(python3:*)",
       "Bash(streamlit run:*)",
       "Bash(/Users/alejandro/Development/smiles/venv/bin/streamlit run:*)",
-      "Bash(/Users/alejandro/Development/smiles/venv/bin/python:*)"
+      "Bash(/Users/alejandro/Development/smiles/venv/bin/python:*)",
+      "Bash(source:*)",
+      "Bash(python model_estimator_analysis.py:*)",
+      "Bash(ls:*)"
     ]
   }
 }

@@ -1,29 +1,11 @@
-import pandas as pd
-import numpy as np
-from rdkit import Chem, DataStructs
-from rdkit.Chem import AllChem
 from sklearn.model_selection import train_test_split
 import torch
 import torch.nn as nn
 from sklearn.metrics import classification_report, accuracy_score
 
-from constants import (
-    TRAINING_DATA_DIR,
-    VAE_AE_MODEL_PREFIX,
-    VAE_CLF_MODEL_PREFIX,
-)
-from model_utils import save_pytorch_model, get_latest_model
-
-#Define a function to compute Morgan fingerprint (radius 2, 2048-bit) using RDKit
-def get_fingerprint(smiles: str):
-    """Convert a SMILES string to a Morgan fingerprint vector (np.array of 2048 bits)."""
-    mol = Chem.MolFromSmiles(smiles)
-    if mol is None:
-        return None  # Invalid SMILES
-    fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=2, nBits=2048)
-    arr = np.zeros((2048,), dtype=int)
-    DataStructs.ConvertToNumpyArray(fp, arr)  # convert fingerprint to numpy array of 0/1
-    return arr
+from data_loader import load_training_data
+from fingerprint_utils import prepare_fingerprints
+from model_utils import save_pytorch_model
 
 
 # Define the Autoencoder model architecture
@@ -44,17 +26,19 @@ class Autoencoder(nn.Module):
             nn.Linear(hidden_dim, input_dim),
             nn.Sigmoid()  # Sigmoid outputs in [0,1] for each bit
         )
+
     def forward(self, x):
         # Pass data through encoder and then decoder
         encoded = self.encoder(x)
         reconstructed = self.decoder(encoded)
         return reconstructed
+
     def encode(self, x):
         # Utility to get the latent code from input
         return self.encoder(x)
 
 
-#Define the Classifier model architecture
+# Define the Classifier model architecture
 class ActivityClassifier(nn.Module):
     def __init__(self, input_dim, dropout=0.2):
         super().__init__()
@@ -64,94 +48,20 @@ class ActivityClassifier(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(64, 1)    # logit
         )
+
     def forward(self, x):
         return self.net(x)
 
 
-#Define the wrapper class for prediction
-class LeishmaniaPyTorchPredictor:
-    """
-    Wrapper para usar el autoencoder + classifier de PyTorch
-    con la MISMA interfaz que el modelo RandomForest.
-    """
-
-    def __init__(self, ae_path=None, clf_path=None):
-        print("Cargando modelos PyTorch para Leishmania...")
-
-        if ae_path is None:
-            ae_path = get_latest_model(VAE_AE_MODEL_PREFIX)
-            if ae_path is None:
-                raise FileNotFoundError(f"No VAE autoencoder model found with prefix '{VAE_AE_MODEL_PREFIX}'")
-
-        if clf_path is None:
-            clf_path = get_latest_model(VAE_CLF_MODEL_PREFIX)
-            if clf_path is None:
-                raise FileNotFoundError(f"No VAE classifier model found with prefix '{VAE_CLF_MODEL_PREFIX}'")
-
-        # Load autoencoder
-        self.ae = Autoencoder()
-        self.ae.load_state_dict(torch.load(ae_path, map_location="cpu"))
-        self.ae.eval()
-
-        # Load classifier (latent size = 256)
-        self.clf = ActivityClassifier(input_dim=256)
-        self.clf.load_state_dict(torch.load(clf_path, map_location="cpu"))
-        self.clf.eval()
-
-        print("Modelos cargados correctamente.")
-
-    # -------------------------------------------------------
-    # SAME SIGNATURE AS RandomForestPredictor.calculate_leishmania_activity
-    # -------------------------------------------------------
-    def calculate_leishmania_activity(self, smiles_list):
-        results = []
-
-        for smiles in smiles_list:
-            fp = get_fingerprint(smiles)
-
-            if fp is None:
-                results.append({
-                    "SMILES": smiles,
-                    "Probabilidad de ser activo": None
-                })
-                continue
-
-            fp_tensor = torch.tensor(fp, dtype=torch.float32).unsqueeze(0)
-
-            # Paso 1: obtener representación latente
-            with torch.no_grad():
-                latent = self.ae.encode(fp_tensor)
-
-            # Paso 2: clasificar
-            with torch.no_grad():
-                logit = self.clf(latent)
-                prob = torch.sigmoid(logit).item()
-
-            results.append({
-                "SMILES": smiles,
-                "Probabilidad de ser activo": prob
-            })
-
-        return pd.DataFrame(results)
-    
-
 if __name__ == "__main__":
-    print("Starting semi-supervised learning for Leishmania compound activity prediction...")
-    # TODO: aquí pegas todo tu bloque de entrenamiento
     print("Starting semi-supervised learning for Leishmania compound activity prediction...")
 
     # 1. Load active / inactive SMILES lists from TXT files
-    #    (one SMILES per line, no header)
-    # ────────────────────────────────────────────────────────────────
-    with open(TRAINING_DATA_DIR / "l_donovani_ACTIVE.txt") as f:
-        active_smiles = [ln.strip() for ln in f if ln.strip()]
-
-    with open(TRAINING_DATA_DIR / "l_donovani_NOT_ACTIVE.txt") as f:
-        nonactive_smiles = [ln.strip() for ln in f if ln.strip()]
+    active_smiles, nonactive_smiles = load_training_data()
 
     # remove duplicates
-    active_smiles      = list(set(active_smiles))
-    nonactive_smiles   = list(set(nonactive_smiles))
+    active_smiles = list(set(active_smiles))
+    nonactive_smiles = list(set(nonactive_smiles))
 
     # Ensure both lists are equal length (for balanced classes)
     if len(nonactive_smiles) > len(active_smiles):
@@ -162,24 +72,8 @@ if __name__ == "__main__":
     print(f"Active compounds (unique): {len(active_smiles)}")
     print(f"Inactive compounds (unique): {len(nonactive_smiles)}")
 
-    # Compute fingerprints for all molecules, building the dataset
-    X_data = []
-    y_labels = []
-    # Positive class (active)
-    for smi in active_smiles:
-        fp = get_fingerprint(smi)
-        if fp is not None:
-            X_data.append(fp)
-            y_labels.append(1)
-    # Negative class (inactive)
-    for smi in nonactive_smiles:
-        fp = get_fingerprint(smi)
-        if fp is not None:
-            X_data.append(fp)
-            y_labels.append(0)
-
-    X_data = np.array(X_data)
-    y_labels = np.array(y_labels)
+    # Compute fingerprints using the shared utility
+    X_data, y_labels = prepare_fingerprints(active_smiles, nonactive_smiles)
     print(f"Total compounds with fingerprints: {X_data.shape[0]}")
 
     # 3. Split into training and test sets for evaluation of the classifier later
@@ -218,7 +112,7 @@ if __name__ == "__main__":
     ae.eval()  # set autoencoder to evaluation mode
     with torch.no_grad():
         X_train_latent = ae.encode(torch.tensor(X_train_full, dtype=torch.float32)).numpy()
-        X_test_latent  = ae.encode(torch.tensor(X_test_full, dtype=torch.float32)).numpy()
+        X_test_latent = ae.encode(torch.tensor(X_test_full, dtype=torch.float32)).numpy()
 
     print(f"Latent feature shape: {X_train_latent.shape} (should be [n_samples, 128])")
 
@@ -246,7 +140,7 @@ if __name__ == "__main__":
         if epoch % 5 == 0 or epoch == 1:
             # Compute training accuracy for info
             preds = (torch.sigmoid(logits) >= 0.5).int()
-            train_acc = (preds.numpy() == y_train.reshape(-1,1)).mean()
+            train_acc = (preds.numpy() == y_train.reshape(-1, 1)).mean()
             print(f"Epoch {epoch:02d}/{num_epochs_clf}, Loss: {loss_clf.item():.4f}, Train Accuracy: {train_acc:.3f}")
 
     # 9. Evaluate the classifier on the test set
@@ -269,4 +163,3 @@ if __name__ == "__main__":
     # Save the trained models with timestamp and accuracy
     save_pytorch_model(model=ae, model_name="leishmania_donovani_vae_ae", accuracy=accuracy)
     save_pytorch_model(model=clf, model_name="leishmania_donovani_vae_clf", accuracy=accuracy)
-

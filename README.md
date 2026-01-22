@@ -5,7 +5,7 @@ A machine learning application that predicts anti-leishmanial activity of chemic
 ## Features
 
 - Predict activity of compounds against Leishmania parasites (L. donovani, L. major, L. infantum, L. mexicana, L. braziliensis)
-- Two prediction models: Random Forest and Semi-Supervised VAE
+- Three prediction models: Random Forest, XGBoost, and Semi-Supervised VAE
 - Web interface for easy predictions
 - Model versioning with timestamps and accuracy tracking
 
@@ -67,6 +67,27 @@ python leishmania_donovani_activity_trainer.py --from-scratch
 - Model saved to `models/leishmania_donovani_rf_{timestamp}_acc{accuracy}.pkl`
 - Training data saved to `training_data/l_donovani_ACTIVE.txt` and `training_data/l_donovani_NOT_ACTIVE.txt` (when using `--from-scratch`)
 
+### XGBoost Model
+
+The XGBoost model uses the same Morgan fingerprints as Random Forest but with gradient boosting, which often performs well on sparse, high-dimensional binary features.
+
+**Configuration:**
+- 300 estimators with max depth of 6
+- Learning rate: 0.1
+- Subsampling: 80% of rows and columns per tree
+- Histogram-based tree method (efficient for sparse data)
+- Automatic class weight balancing
+
+**To train:**
+
+```bash
+# Requires training data files (run RF trainer with --from-scratch first if needed)
+python leishmania_donovani_xgboost_trainer.py --use-existing
+```
+
+**Output:**
+- Model saved to `models/leishmania_donovani_xgb_{timestamp}_acc{accuracy}.pkl`
+
 ### VAE Model (Semi-Supervised)
 
 The VAE model uses an autoencoder to learn latent representations, then trains a classifier on the latent space.
@@ -87,6 +108,81 @@ python leishmania_semi_supervised.py
 **Output:**
 - Autoencoder: `models/leishmania_donovani_vae_ae_{timestamp}_acc{accuracy}.pth`
 - Classifier: `models/leishmania_donovani_vae_clf_{timestamp}_acc{accuracy}.pth`
+
+## Model Performance Analysis
+
+The `model_estimator_analysis.py` tool helps optimize hyperparameters by analyzing how model accuracy changes with the number of estimators.
+
+**Features:**
+- Tests n_estimators values from 10 to 1500
+- Uses 5-fold cross-validation for reliable estimates
+- Identifies both the best accuracy achieved and where accuracy plateaus
+- Generates matplotlib plots with error bars
+- Supports Random Forest, XGBoost, or side-by-side comparison
+
+**Usage:**
+
+```bash
+# Analyze Random Forest estimators
+python model_estimator_analysis.py --model rf
+
+# Analyze XGBoost estimators
+python model_estimator_analysis.py --model xgb
+
+# Compare both models side-by-side
+python model_estimator_analysis.py --model both
+```
+
+**Output:**
+- Individual model plots: `models/rf_estimator_analysis.png` or `models/xgb_estimator_analysis.png`
+- Comparison plot (when using `--model both`): `models/comparison_estimator_analysis.png`
+- Console output shows recommended n_estimators values where accuracy gains diminish
+
+**Prerequisites:**
+- Training data files must exist: `training_data/l_donovani_ACTIVE.txt` and `training_data/l_donovani_NOT_ACTIVE.txt`
+- Run `python leishmania_donovani_activity_trainer.py --from-scratch` to generate these files if needed
+
+## Shared Utilities
+
+The codebase uses two shared utility modules to eliminate code duplication across training and prediction scripts:
+
+### fingerprint_utils.py
+
+Provides standardized Morgan fingerprint generation for SMILES processing:
+
+```python
+from fingerprint_utils import get_fingerprint, prepare_fingerprints
+
+# Convert single SMILES to fingerprint
+fp = get_fingerprint("CC(=O)Oc1ccccc1C(=O)O")  # Returns np.ndarray of shape (2048,)
+
+# Prepare training data from SMILES lists
+X, y = prepare_fingerprints(active_smiles_list, inactive_smiles_list)
+```
+
+**Key features:**
+- Morgan fingerprints with configurable radius (default 2) and bit length (default 2048)
+- Batch processing with labels for efficient data preparation
+- Automatic RDKit warning suppression
+
+### data_loader.py
+
+Handles loading and saving of SMILES training data:
+
+```python
+from data_loader import load_training_data, save_training_data
+
+# Load training data
+active_smiles, inactive_smiles = load_training_data()
+
+# Save training data
+save_training_data(active_smiles, inactive_smiles)
+```
+
+**Key features:**
+- Standardized paths for training data files
+- Simple line-based SMILES file format (one per line)
+- Optional progress reporting
 
 ## Training Pipeline Overview
 
@@ -111,7 +207,8 @@ python leishmania_semi_supervised.py
 │                      MODEL TRAINING                              │
 ├─────────────────────────────────────────────────────────────────┤
 │  Option A: Random Forest (500 trees)                            │
-│  Option B: VAE Autoencoder + Classifier                         │
+│  Option B: XGBoost (300 estimators, gradient boosting)          │
+│  Option C: VAE Autoencoder + Classifier                         │
 │                                                                  │
 │  Train/Test Split: 80/20 (stratified)                           │
 └─────────────────────────────────────────────────────────────────┘
@@ -129,19 +226,23 @@ python leishmania_semi_supervised.py
 
 ```
 smiles/
-├── main.py                          # Streamlit web application
-├── predictors.py                    # Prediction interface (RF & VAE)
-├── model_utils.py                   # Model saving/loading utilities
-├── constants.py                     # Configuration and constants
+├── main.py                              # Streamlit web application
+├── predictors.py                        # Prediction interface (RF & VAE)
+├── model_utils.py                       # Model saving/loading utilities
+├── constants.py                         # Configuration and constants
+├── fingerprint_utils.py                 # Molecular fingerprint utilities (shared)
+├── data_loader.py                       # Training data I/O utilities (shared)
 ├── leishmania_donovani_activity_trainer.py  # RF training script
-├── leishmania_semi_supervised.py    # VAE training script
-├── models/                          # Trained models directory
-├── training_data/                   # Training data directory
-│   ├── l_donovani_ACTIVE.txt       # Active compound SMILES
-│   └── l_donovani_NOT_ACTIVE.txt   # Inactive compound SMILES
-├── external_data/                   # External data files
-│   └── chembl_35.sdf               # ChEMBL compound database (optional)
-└── requirements.txt                 # Python dependencies
+├── leishmania_donovani_xgboost_trainer.py   # XGBoost training script
+├── leishmania_semi_supervised.py        # VAE training script
+├── model_estimator_analysis.py          # Hyperparameter optimization analysis
+├── models/                              # Trained models directory
+├── training_data/                       # Training data directory
+│   ├── l_donovani_ACTIVE.txt           # Active compound SMILES
+│   └── l_donovani_NOT_ACTIVE.txt       # Inactive compound SMILES
+├── external_data/                       # External data files
+│   └── chembl_35.sdf                   # ChEMBL compound database (optional)
+└── requirements.txt                     # Python dependencies
 ```
 
 ## License

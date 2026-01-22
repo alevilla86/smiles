@@ -6,33 +6,19 @@ Provides a unified interface for different prediction models (Random Forest, VAE
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
-import numpy as np
 import pandas as pd
 import joblib
 import torch
-from rdkit import Chem, DataStructs, RDLogger
-from rdkit.Chem import AllChem
 
 from constants import (
     PredictorType,
     RF_MODEL_PREFIX,
     VAE_AE_MODEL_PREFIX,
     VAE_CLF_MODEL_PREFIX,
+    XGBOOST_MODEL_PREFIX,
 )
+from fingerprint_utils import get_fingerprint
 from model_utils import get_latest_model
-
-RDLogger.DisableLog('rdApp.*')
-
-
-def get_fingerprint(smiles: str) -> Optional[np.ndarray]:
-    """Convert a SMILES string to a Morgan fingerprint vector (2048 bits)."""
-    mol = Chem.MolFromSmiles(smiles)
-    if mol is None:
-        return None
-    fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=2, nBits=2048)
-    arr = np.zeros((2048,), dtype=np.float32)
-    DataStructs.ConvertToNumpyArray(fp, arr)
-    return arr
 
 
 class BasePredictor(ABC):
@@ -118,6 +104,28 @@ class VAEPredictor(BasePredictor):
         return pd.DataFrame(results)
 
 
+class XGBoostPredictor(BasePredictor):
+    """XGBoost-based predictor using Morgan fingerprints."""
+
+    def __init__(self, model_path: Optional[str] = None):
+        if model_path is None:
+            model_path = get_latest_model(XGBOOST_MODEL_PREFIX)
+            if model_path is None:
+                raise FileNotFoundError(f"No XGBoost model found with prefix '{XGBOOST_MODEL_PREFIX}'")
+        self.model = joblib.load(model_path)
+
+    def predict(self, smiles_list: List[str]) -> pd.DataFrame:
+        results = []
+        for smiles in smiles_list:
+            fp = get_fingerprint(smiles)
+            if fp is not None:
+                prob = self.model.predict_proba([fp])[0][1]
+                results.append({"SMILES": smiles, "Probabilidad de ser activo": prob})
+            else:
+                results.append({"SMILES": smiles, "Probabilidad de ser activo": None})
+        return pd.DataFrame(results)
+
+
 def create_predictor(
     predictor_type: PredictorType = PredictorType.RANDOM_FOREST,
     model_path: Optional[str] = None,
@@ -128,8 +136,8 @@ def create_predictor(
     Factory function to create the appropriate predictor.
 
     Args:
-        predictor_type: Type of predictor to create (RANDOM_FOREST or VAE)
-        model_path: Path to Random Forest model (optional, uses default if not provided)
+        predictor_type: Type of predictor to create (RANDOM_FOREST, VAE, or XGBOOST)
+        model_path: Path to Random Forest or XGBoost model (optional, uses default if not provided)
         vae_ae_path: Path to VAE autoencoder model (optional)
         vae_clf_path: Path to VAE classifier model (optional)
 
@@ -144,5 +152,9 @@ def create_predictor(
         if vae_ae_path and vae_clf_path:
             return VAEPredictor(ae_path=vae_ae_path, clf_path=vae_clf_path)
         return VAEPredictor()
+    elif predictor_type == PredictorType.XGBOOST:
+        if model_path:
+            return XGBoostPredictor(model_path=model_path)
+        return XGBoostPredictor()
     else:
         raise ValueError(f"Unknown predictor type: {predictor_type}")

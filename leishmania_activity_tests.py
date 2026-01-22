@@ -1,13 +1,7 @@
 import joblib
-from rdkit import Chem
-from rdkit.Chem import AllChem
-from rdkit import DataStructs
-from rdkit import RDLogger
-import numpy as np
 
+from fingerprint_utils import get_fingerprint
 from model_utils import get_latest_model
-
-RDLogger.DisableLog('rdApp.*')
 
 USAL_COMPOUNDS = [
     "CC1=CC2=C(NC(=N2)C2=CC=C(O2)N(=O)=O)C=C1",
@@ -41,14 +35,6 @@ print(f"Cargando modelo: {model_path}")
 clf = joblib.load(model_path)
 print("Modelo cargado exitosamente.")
 
-def get_fingerprint(smiles):
-    mol = Chem.MolFromSmiles(smiles)
-    if mol is None:
-        return None
-    fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=2, nBits=2048)
-    arr = np.zeros((2048,))
-    DataStructs.ConvertToNumpyArray(fp, arr)
-    return arr
 
 def leishmania_tests():
     for smiles in USAL_COMPOUNDS:
@@ -59,11 +45,9 @@ def leishmania_tests():
         else:
             print(f"SMILES inválido: {smiles}")
 
+
 if __name__ == "__main__":
-
-        # Ejecutar el script principal
+    # Ejecutar el script principal
     print("Ejecutando pruebas de actividad para Leishmania...")
-
     leishmania_tests()
-
     print("Pruebas de predicciones completadas.")

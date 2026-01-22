@@ -13,7 +13,7 @@ import streamlit as st
 
 from constants import UIConfig, PredictorType
 from predictors import create_predictor
-from model_utils import get_available_rf_models, get_available_vae_models
+from model_utils import get_available_rf_models, get_available_vae_models, get_available_xgb_models
 
 
 # =============================================================================
@@ -157,6 +157,7 @@ def render_model_selector() -> tuple[PredictorType, Optional[str], Optional[str]
     """
     rf_models = get_available_rf_models()
     vae_model_pairs = get_available_vae_models()
+    xgb_models = get_available_xgb_models()
 
     # Build options list
     options = []
@@ -165,6 +166,10 @@ def render_model_selector() -> tuple[PredictorType, Optional[str], Optional[str]
     for model in rf_models:
         options.append(f"🌲 {model.display_name}")
         option_data.append((PredictorType.RANDOM_FOREST, str(model.path), None, None))
+
+    for model in xgb_models:
+        options.append(f"🚀 {model.display_name}")
+        option_data.append((PredictorType.XGBOOST, str(model.path), None, None))
 
     for ae_model, clf_model in vae_model_pairs:
         date_str = ae_model.timestamp.strftime("%Y-%m-%d %H:%M")

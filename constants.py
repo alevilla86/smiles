@@ -29,12 +29,14 @@ class PredictionThreshold:
 class PredictorType(Enum):
     RANDOM_FOREST = "random_forest"
     VAE = "vae"
+    XGBOOST = "xgboost"
 
 
 # Model name prefixes (used with get_latest_model)
 RF_MODEL_PREFIX = "leishmania_donovani_rf"
 VAE_AE_MODEL_PREFIX = "leishmania_donovani_vae_ae"
 VAE_CLF_MODEL_PREFIX = "leishmania_donovani_vae_clf"
+XGBOOST_MODEL_PREFIX = "leishmania_donovani_xgb"
 
 LEISHMANIA_SPECIES_DONOVANI = ["Leishmania donovani"]
 

@@ -149,6 +149,7 @@ class ModelInfo:
             "rf": "Random Forest",
             "vae_ae": "VAE (Autoencoder)",
             "vae_clf": "VAE (Classifier)",
+            "xgb": "XGBoost",
         }
         type_label = type_labels.get(self.model_type, self.model_type.upper())
         date_str = self.timestamp.strftime("%Y-%m-%d %H:%M")
@@ -193,6 +194,8 @@ def parse_model_filename(filepath: Path) -> Optional[ModelInfo]:
         model_type = "vae_ae"
     elif name.endswith("_vae_clf"):
         model_type = "vae_clf"
+    elif name.endswith("_xgb"):
+        model_type = "xgb"
     else:
         model_type = "unknown"
 
@@ -266,3 +269,8 @@ def get_available_vae_models(models_dir: Path = MODELS_DIR) -> list[tuple[ModelI
     pairs.sort(key=lambda p: p[0].timestamp, reverse=True)
 
     return pairs
+
+
+def get_available_xgb_models(models_dir: Path = MODELS_DIR) -> list[ModelInfo]:
+    """Get all available XGBoost models."""
+    return list_available_models(models_dir, model_type_filter="xgb")
